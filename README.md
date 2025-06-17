@@ -51,7 +51,7 @@
 
 ### 3.1 模型整体架构流程图
 
-```mermaid
+```
 flowchart TD
     A[电力系统图数据采集] --> B[图结构构建 (节点:机组, 边:耦合关系)]
     B --> C[图神经网络特征提取 GNN]
@@ -116,5 +116,6 @@ class PowerDispatchGNN(nn.Module):
         p = self.output_layer(h)  # 调度输出
         return p
 ```
-
+![image](https://github.com/user-attachments/assets/94151391-e0b9-470c-a47e-a9450aa6599c)
+![image](https://github.com/user-attachments/assets/ef990982-d8c4-4a93-8f29-54126bd91000)
 ---
