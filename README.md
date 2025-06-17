@@ -1,6 +1,4 @@
 # practice
-以下是根据你的项目内容和要求撰写的 **Markdown 项目文档模板**，内容美观、规范，并包含流程图、方法描述、核心算法、公式等部分，适合用于项目总结或答辩材料：
-
 ---
 
 # 基于图神经网络的电力系统约束优化调度模型
@@ -120,41 +118,3 @@ class PowerDispatchGNN(nn.Module):
 ```
 
 ---
-
-## 四、阶段目标与计划
-
-| 阶段   | 目标        | 时间安排  |
-| ---- | --------- | ----- |
-| 第一阶段 | 数据收集与图构建  | 第1-2周 |
-| 第二阶段 | 模型搭建与调度建模 | 第3-4周 |
-| 第三阶段 | 训练与优化调试   | 第5-6周 |
-| 第四阶段 | 效果评估与演示准备 | 第7-8周 |
-
----
-
-## 五、预期成果与应用前景
-
-### 5.1 项目成果
-
-* 一个可运行的基于 GNN 的电力调度优化系统；
-* 多组真实/模拟数据下的实验效果报告；
-* 项目总结报告与展示材料。
-
-### 5.2 应用前景
-
-* 适用于大型区域电网调度；
-* 可扩展至可再生能源预测与调度协同；
-* 与边缘计算平台集成实现实时优化推理。
-
----
-
-## 六、参考文献
-
-1. Kipf, T. N., & Welling, M. (2017). Semi-Supervised Classification with Graph Convolutional Networks.
-2. Velickovic, P. et al. (2018). Graph Attention Networks.
-3. Boyd, S., & Vandenberghe, L. (2004). Convex Optimization.
-4. Zhang, J. et al. (2022). Deep Learning-based Optimal Power Flow: A Review.
-
----
-
-如需我帮你将此文档转换成 PDF、添加 LaTeX 渲染支持或进一步细化某一模块，请告诉我！
