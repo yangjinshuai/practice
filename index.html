@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>基于GNN的电力系统调度优化平台</title>
+    <link href="https://fonts.googleapis.com/css?family=Roboto:400,700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(120deg, #e0eafc, #cfdef3);
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 40px auto;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+            padding: 32px 40px;
+        }
+        h1, h2 {
+            color: #2a5298;
+        }
+        .section {
+            margin-bottom: 32px;
+        }
+        .flex-row {
+            display: flex;
+            gap: 32px;
+        }
+        .flex-col {
+            flex: 1;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #2a5298;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid #b0c4de;
+            margin-bottom: 16px;
+        }
+        button {
+            background: linear-gradient(90deg, #2a5298, #1e3c72);
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 12px 32px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background: linear-gradient(90deg, #1e3c72, #2a5298);
+        }
+        #graph-canvas {
+            width: 100%;
+            height: 350px;
+            background: #f5f8fa;
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+        .result-box {
+            background: #f0f4fa;
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 16px;
+        }
+        .analysis {
+            margin-top: 16px;
+        }
+        /* 模态窗口样式 */
+        #gen-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(44,62,80,0.25);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        #gen-modal > div {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(44,62,80,0.18);
+            padding: 32px 36px;
+            min-width: 340px;
+            max-width: 90vw;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 项目介绍区 -->
+        <div class="section">
+            <h1>基于深度学习的图数据约束优化在电力系统调度中的应用</h1>
+            <p>本平台利用图神经网络（GNN）技术，构建高效的约束优化模型，解决电力系统中多发电机组的调度问题。通过图数据建模，综合考虑物理、经济和技术约束，实现发电机组的最优调度。</p>
+        </div>
+        <!-- 图数据可视化区 -->
+        <div class="section">
+            <h2>电力系统网络结构</h2>
+            <canvas id="graph-canvas"></canvas>
+        </div>
+        <!-- 参数输入区 -->
+        <div class="section flex-row">
+            <div class="flex-col">
+                <h2>参数设置</h2>
+                <form id="param-form">
+                    <label>发电机数量</label>
+                    <input type="number" id="gen-count" min="2" max="10" value="3" required>
+                    <button type="button" id="set-gens-btn" style="margin-bottom:16px;">设置发电机参数</button>
+                    <label>技术约束（爬坡率 MW/h）</label>
+                    <input type="number" id="ramp-rate" min="1" max="100" value="20" required>
+                    <button type="submit">更新参数</button>
+                </form>
+            </div>
+            <div class="flex-col">
+                <h2>调度优化</h2>
+                <button id="optimize-btn">开始优化</button>
+                <div id="result" class="result-box" style="display:none;"></div>
+            </div>
+        </div>
+        <!-- 结果分析区 -->
+        <div class="section analysis">
+            <h2>结果分析</h2>
+            <div id="analysis-content">请先进行调度优化，结果将在此展示。</div>
+        </div>
+    </div>
+    <!-- 发电机参数模态窗口 -->
+    <div id="gen-modal" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(44,62,80,0.25);z-index:1000;align-items:center;justify-content:center;">
+        <div style="background:#fff;border-radius:12px;box-shadow:0 8px 32px rgba(44,62,80,0.18);padding:32px 36px;min-width:340px;max-width:90vw;">
+            <h2 style="color:#2a5298;margin-top:0;">设置发电机参数</h2>
+            <form id="modal-gen-form">
+                <div id="modal-gen-inputs"></div>
+                <div style="text-align:right;margin-top:18px;">
+                    <button type="button" id="modal-cancel" style="margin-right:12px;background:#b0c4de;color:#2a5298;">取消</button>
+                    <button type="submit">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <script>
+        // 简单的图结构可视化（可用D3.js等替换）
+        let genCount = 3;
+        let generatorParams = [
+            {maxPower:500,minPower:100,costCoef:10},
+            {maxPower:500,minPower:100,costCoef:10},
+            {maxPower:500,minPower:100,costCoef:10}
+        ];
+        function drawGraph(genCount) {
+            const canvas = document.getElementById('graph-canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // 画发电机节点
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const radius = Math.min(centerX, centerY) - 60;
+            for (let i = 0; i < genCount; i++) {
+                const angle = (2 * Math.PI / genCount) * i;
+                const x = centerX + radius * Math.cos(angle);
+                const y = centerY + radius * Math.sin(angle);
+                ctx.beginPath();
+                ctx.arc(x, y, 28, 0, 2 * Math.PI);
+                ctx.fillStyle = '#2a5298';
+                ctx.fill();
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 18px Roboto';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('G' + (i+1), x, y);
+                // 画连线到中心负载
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                ctx.lineTo(centerX, centerY);
+                ctx.strokeStyle = '#b0c4de';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+            }
+            // 画中心负载
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 36, 0, 2 * Math.PI);
+            ctx.fillStyle = '#f39c12';
+            ctx.fill();
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 20px Roboto';
+            ctx.fillText('负载', centerX, centerY);
+        }
+        function updateModalInputs() {
+            let html = '';
+            for(let i=0;i<genCount;i++){
+                const g = generatorParams[i] || {maxPower:500,minPower:100,costCoef:10};
+                html += `<fieldset style='margin-bottom:12px;padding:10px 12px;border:1px solid #b0c4de;border-radius:6px;'>
+                    <legend style='color:#2a5298;font-weight:bold;'>发电机${i+1}</legend>
+                    <label>最大出力 (MW)</label>
+                    <input type='number' class='modal-max-power' data-idx='${i}' min='10' max='1000' value='${g.maxPower}' required>
+                    <label>最小出力 (MW)</label>
+                    <input type='number' class='modal-min-power' data-idx='${i}' min='0' max='1000' value='${g.minPower}' required>
+                    <label>经济约束（成本系数）</label>
+                    <input type='number' class='modal-cost-coef' data-idx='${i}' min='1' max='100' value='${g.costCoef}' required>
+                </fieldset>`;
+            }
+            document.getElementById('modal-gen-inputs').innerHTML = html;
+        }
+        // 初始化
+        drawGraph(genCount);
+        document.getElementById('set-gens-btn').onclick = function() {
+            genCount = parseInt(document.getElementById('gen-count').value);
+            // 保证参数数组长度
+            while(generatorParams.length < genCount) generatorParams.push({maxPower:500,minPower:100,costCoef:10});
+            generatorParams = generatorParams.slice(0, genCount);
+            updateModalInputs();
+            document.getElementById('gen-modal').style.display = 'flex';
+        };
+        document.getElementById('modal-cancel').onclick = function() {
+            document.getElementById('gen-modal').style.display = 'none';
+        };
+        document.getElementById('modal-gen-form').onsubmit = function(e) {
+            e.preventDefault();
+            const maxs = Array.from(document.getElementsByClassName('modal-max-power')).map(input=>parseFloat(input.value));
+            const mins = Array.from(document.getElementsByClassName('modal-min-power')).map(input=>parseFloat(input.value));
+            const coefs = Array.from(document.getElementsByClassName('modal-cost-coef')).map(input=>parseFloat(input.value));
+            generatorParams = maxs.map((max,i)=>({maxPower:max,minPower:mins[i],costCoef:coefs[i]}));
+            document.getElementById('gen-modal').style.display = 'none';
+        };
+        document.getElementById('gen-count').addEventListener('change', function() {
+            genCount = parseInt(this.value);
+            while(generatorParams.length < genCount) generatorParams.push({maxPower:500,minPower:100,costCoef:10});
+            generatorParams = generatorParams.slice(0, genCount);
+            drawGraph(genCount);
+        });
+        document.getElementById('param-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            genCount = parseInt(document.getElementById('gen-count').value);
+            drawGraph(genCount);
+        });
+        // 优化按钮事件
+        document.getElementById('optimize-btn').onclick = function() {
+            const rampRate = parseFloat(document.getElementById('ramp-rate').value);
+            const params = {
+                genCount,
+                rampRate,
+                generators: generatorParams
+            };
+            // 这里预留后端API调用位置
+            // fetch('/api/optimize', { method: 'POST', body: JSON.stringify(params) })
+            //   .then(res => res.json()).then(data => { ... });
+            // 这里用模拟数据演示
+            const result = {
+                schedule: params.generators.map((g,i) => ({
+                    name: 'G'+(i+1),
+                    output: (g.maxPower-g.minPower)*Math.random()+g.minPower
+                })),
+                totalCost: params.generators.reduce((sum,g,i) => sum + g.costCoef*100, 0).toFixed(2),
+                constraintsMet: true
+            };
+            let html = '<b>调度方案：</b><ul>';
+            result.schedule.forEach(g => {
+                html += `<li>${g.name}：${g.output.toFixed(2)} MW</li>`;
+            });
+            html += '</ul>';
+            html += `<b>总成本：</b>￥${result.totalCost}<br>`;
+            html += `<b>约束满足：</b>${result.constraintsMet ? '是' : '否'}`;
+            document.getElementById('result').innerHTML = html;
+            document.getElementById('result').style.display = 'block';
+            // 结果分析
+            document.getElementById('analysis-content').innerHTML = `
+                <ul>
+                    <li>所有发电机组均满足出力与爬坡约束。</li>
+                    <li>总成本较优化前降低（模拟数据）。</li>
+                    <li>可进一步集成GNN模型，提升调度智能化水平。</li>
+                </ul>
+            `;
+        };
+    </script>
+</body>
+</html>
